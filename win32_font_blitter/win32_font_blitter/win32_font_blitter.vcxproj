@@ -137,12 +137,14 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="FontBlitter.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="win32_font_blitter.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="FontBlitter.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -155,6 +157,7 @@
     <ResourceCompile Include="win32_font_blitter.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="images\1930__W_24__H_24.bmp" />
     <Image Include="small.ico" />
     <Image Include="win32_font_blitter.ico" />
   </ItemGroup>

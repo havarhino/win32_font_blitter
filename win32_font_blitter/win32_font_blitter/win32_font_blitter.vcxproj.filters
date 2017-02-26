@@ -30,12 +30,18 @@
     <ClInclude Include="win32_font_blitter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="FontBlitter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="win32_font_blitter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FontBlitter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -49,6 +55,9 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="win32_font_blitter.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="images\1930__W_24__H_24.bmp">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
