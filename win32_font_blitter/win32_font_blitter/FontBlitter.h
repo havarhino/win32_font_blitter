@@ -17,7 +17,6 @@ private:
 	BYTE * bitmapDataPtr = 0;
 
 	BYTE * ToPixels(HBITMAP BitmapHandle, BITMAPINFO & info);
-	void computeGridSize(BYTE * pixels, BITMAPINFO & info, int &gridWidth, int &gridHeight);
 	void loadImages();
 
 };

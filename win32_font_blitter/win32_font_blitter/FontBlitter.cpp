@@ -65,23 +65,12 @@ int * getFactors(int size, int & numberOfFactors) {
 
 }
 
-void FontBlitter::computeGridSize(BYTE * pixels, BITMAPINFO & info, int &gridWidth, int &gridHeight) {
-	int w = info.bmiHeader.biWidth;
-	int h = info.bmiHeader.biHeight;
-	h = (h < 0) ? -h : h;
-	int bytesPerPixel = info.bmiHeader.biBitCount / 8;
-	int lineWidth = ((w * info.bmiHeader.biBitCount + 31) / 32) * 4;
-	long numWhitePixels = 0;
-	long numBlackPixels = 0;
-
-	int totalPixels = w*h;
-
-	if( (bytesPerPixel != 1) && (bytesPerPixel != 3) && (bytesPerPixel != 4) ) {
-		throw "Yikes!!!   Unsuported bytes per pixel (not 1, 3 or 4)";
-	}
-
+void computeRowColumnTotals(BYTE * pixels, int w, int h, int bytesPerPixel, int lineWidth, int ** pColTotals, int ** pRowTotals) {
 	int * colTotals = (int *)malloc(w * sizeof(int));
 	int * rowTotals = (int *)malloc(h * sizeof(int));
+
+	*pColTotals = colTotals;
+	*pRowTotals = rowTotals;
 
 	for (int i = 0; i < w; i++) {
 		colTotals[i] = 0;
@@ -90,122 +79,108 @@ void FontBlitter::computeGridSize(BYTE * pixels, BITMAPINFO & info, int &gridWid
 		rowTotals[i] = 0;
 	}
 
-    for (int y = 0; y < h; y++) {
-	    for (int x = 0; x < w; x++) {
+	// The actual formula for converting R/G/B to intensity is
+	//    I = 0.2989 * R + 0.5870 * G + 0.114 * B
+	// But, floating point multiplication is pretty slow, and we don't need
+	// super accurate intensity calculation to look for the most likely cell boundary spacing,
+	// We could use 2 different formulae:
+	//     A) Faster, but less accurate:
+	//    I ~=  0.25 * R  +  0.625 * G     +  0.125*B
+	//              - 2 parts red, 5 parts green, 1 part blue
+	//          (  2*R    +  (4*G + G)     +  B) / 8;
+	//          ( (R<<1)  +  ((G<<2) + G)  +  B) / >>3; 
+	//     B)  This uses one more additions and one more shift, so not that much slower, but more accurate:
+	//              - 5 parts red, 9 parts green, 2 part blue, which is basically
+	//    I ~=  0.3125 * R  + 0.5625 * G  + 0.125 * B;
+	//    I ~=  (     5*R       +      9*G     +   2*B ) / 16;
+	//    i ~=  ( ((R<<2) + R)  + ((G<<3) + G) + (B<<1)) >> 4;
+
+	for (int y = 0; y < h; y++) {
+		for (int x = 0; x < w; x++) {
 			BYTE intensity;
 
-			if( bytesPerPixel == 1 ) {
-			    BYTE * pixelPtr = &(pixels[lineWidth*y + x]);
+			if (bytesPerPixel == 1) {
+				BYTE * pixelPtr = &(pixels[lineWidth*y + x]);
 				intensity = *pixelPtr;
 
-			} else if (bytesPerPixel == 3) {
-			    BYTE * pixelPtr = &(pixels[lineWidth*y + x*bytesPerPixel]);
-			    int B = (int)(*pixelPtr++);
+			}
+			else if (bytesPerPixel == 3) {
+				BYTE * pixelPtr = &(pixels[lineWidth*y + x*bytesPerPixel]);
+				int B = (int)(*pixelPtr++);
 				int G = (int)(*pixelPtr++);
 				int R = (int)(*pixelPtr++);
 
-				// The actual formula for converting R/G/B to intensity is
-				//    I = 0.2989 * R + 0.5870 * G + 0.114 * B
-				// But, floating point multiplication is pretty slow, and we don't need
-				// super accurate intensity calculation to look for the most likely cell boundary spacing,
-				// We could use 2 different formulae:
-				//     A) Faster, but less accurate:
-				//    I ~=  0.25 * R  +  0.625 * G     +  0.125*B
-				//              - 2 parts red, 5 parts green, 1 part blue
-				//          (  2*R    +  (4*G + G)     +  B) / 8;
-				//          ( (R<<1)  +  ((G<<2) + G)  +  B) / >>3; 
-				//     B)  This uses one more additions and one more shift, so not that much slower, but more accurate:
-				//              - 5 parts red, 9 parts green, 2 part blue, which is basically
-				//    I ~=  0.3125 * R  + 0.5625 * G  + 0.125 * B;
-				//    I ~=  (     5*R       +      9*G     +   2*B ) / 16;
-				//    i ~=  ( ((R<<2) + R)  + ((G<<3) + G) + (B<<1)) >> 4;
-
-				intensity = (BYTE)(( ((R<<2) + R)  + ((G<<3) + G) + (B<<1)) >> 4);
+				intensity = (BYTE)((((R << 2) + R) + ((G << 3) + G) + (B << 1)) >> 4);
 			}
 			else {
-			    BYTE * pixelPtr = &(pixels[lineWidth*y + x*bytesPerPixel]);
-			    int B = (int)(*pixelPtr++);
+				BYTE * pixelPtr = &(pixels[lineWidth*y + x*bytesPerPixel]);
+				int B = (int)(*pixelPtr++);
 				int G = (int)(*pixelPtr++);
 				int R = (int)(*pixelPtr++);
 				int a = (int)(*pixelPtr++);
 
-				intensity = (BYTE)(( ((R<<2) + R)  + ((G<<3) + G) + (B<<1)) >> 4);
+				intensity = (BYTE)((((R << 2) + R) + ((G << 3) + G) + (B << 1)) >> 4);
 			}
 
-			colTotals[x] += 255 - intensity;
-			rowTotals[y] += 255 - intensity;
+			colTotals[x] += (255 - intensity);
+			rowTotals[y] += (255 - intensity);
+		}
+	}
+}
 
-			if( intensity >= WHITE_THRESHOLD ) {
-				numWhitePixels++;
-			}
-			if( intensity <= BLACK_THRESHOLD ) {
-				numBlackPixels++;
-			}
-	    }
-    }
-
-	bool whiteIsBackground = numWhitePixels > numBlackPixels;
+int findMostLikelyPeriod(int maxPosition, int * totals) {
+	long bestPeriodTotal = INT_MAX;
+	int bestPeriod = -1;
+	int factorSize;
 
 	// Find all factors of the width to find possible cell width sizes
-	int numWidthFactors;
-	int numHeightFactors;
-	int * widthFactors = getFactors(w, numWidthFactors);
-	int * heightFactors = getFactors(h, numHeightFactors);
+	int * factorArray = getFactors(maxPosition, factorSize);
 
-	int bestWidthFactorTotal = INT_MAX;
-	gridWidth = -1;
-
-	for (int i = 0; i < numWidthFactors; i++) {
-		int period = widthFactors[i];
-		float colFreqTotal = 0;
-		int numColumns = 0;
-		for (int p = 0; p < w; p += period) {
-			colFreqTotal += (float)colTotals[p];
-			numColumns++;
+	for (int i = 0; i < factorSize; i++) {
+		int period = factorArray[i];
+		long freqTotal = 0;
+		int counter = 0;
+		for (int p = 0; p < maxPosition; p += period) {
+			freqTotal += (long)totals[p];
+			counter++;
 		}
-		if( numColumns > 0 ) {
-		    colFreqTotal /= (float)numColumns;
-		} else {
-			colFreqTotal = (float)h * 255.0;
-			throw "Yikes!! We should never get numColumns == 0";
+		if (counter > 0) {
+			freqTotal /= (long)counter;
 		}
-		if (colFreqTotal < bestWidthFactorTotal) {
-			bestWidthFactorTotal = colFreqTotal;
-			gridWidth = period;
+		else {
+			freqTotal = INT_MAX;
+			throw "Yikes!! We should never get counter == 0";
+		}
+		if (freqTotal < bestPeriodTotal) {
+			bestPeriodTotal = freqTotal;
+			bestPeriod = period;
 		}
 	}
+	delete(factorArray);
 
-	int bestHeightFactorTotal = INT_MAX;
-	gridHeight = -1;
+	return bestPeriod;
+}
 
-	for (int i = 0; i < numHeightFactors; i++) {
-		int period = heightFactors[i];
-		float rowFreqTotal = 0;
-		int numRows = 0;
-		for (int p = 0; p < h; p += period) {
-			rowFreqTotal += (float)rowTotals[p];
-			numRows++;
-		}
-		if( numRows > 0 ) {
-		    rowFreqTotal /= (float)numRows;
-		} else {
-			rowFreqTotal = (float)w * 255.0;
-			throw "Yikes!! We should never get numRows == 0";
-		}
-		if (rowFreqTotal < bestHeightFactorTotal) {
-			bestHeightFactorTotal = rowFreqTotal;
-			gridHeight = period;
-		}
+void computeGridSize(BYTE * pixels, BITMAPINFO & info, int &gridWidth, int &gridHeight) {
+	int w = info.bmiHeader.biWidth;
+	int h = info.bmiHeader.biHeight;
+	h = (h < 0) ? -h : h;
+	int bytesPerPixel = info.bmiHeader.biBitCount / 8;
+	int lineWidth = ((w * info.bmiHeader.biBitCount + 31) / 32) * 4;
+	int * rowTotals = 0;
+	int * colTotals = 0;
+
+	if( (bytesPerPixel != 1) && (bytesPerPixel != 3) && (bytesPerPixel != 4) ) {
+		throw "Yikes!!!   Unsuported bytes per pixel (not 1, 3 or 4)";
 	}
+
+	computeRowColumnTotals(pixels, w, h, bytesPerPixel, lineWidth, &colTotals, &rowTotals);
+
+	gridWidth = findMostLikelyPeriod(w, colTotals);
+	gridHeight = findMostLikelyPeriod(h, rowTotals);
 
 	free( colTotals );
-	colTotals = 0;
 	free( rowTotals );
-	rowTotals = 0;
-	free(widthFactors);
-	widthFactors = 0;
-	free(heightFactors);
-	heightFactors = 0;
 }
 
 void FontBlitter::loadImages() {
