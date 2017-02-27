@@ -10,7 +10,7 @@ FontBlitter::FontBlitter(HBITMAP inBitmap) {
 
 // This function will allocate memory and fill that memory with the bitmap raw bitmap data.
 // The caller of this method is responsible for free'ing the returned pointer, if it is non-null.
-BYTE * FontBlitter::ToPixels(HBITMAP BitmapHandle, BITMAPINFO & info ) {
+BYTE * ToPixels(HBITMAP BitmapHandle, BITMAPINFO & info ) {
 	BITMAP Bmp = { 0 };
 	BYTE * Pixels = 0;
 

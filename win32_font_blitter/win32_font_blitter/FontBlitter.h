@@ -16,7 +16,6 @@ private:
 	int cellHeight = -1;
 	BYTE * bitmapDataPtr = 0;
 
-	BYTE * ToPixels(HBITMAP BitmapHandle, BITMAPINFO & info);
 	void loadImages();
 
 };

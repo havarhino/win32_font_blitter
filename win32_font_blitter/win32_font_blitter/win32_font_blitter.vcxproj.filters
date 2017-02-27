@@ -33,6 +33,12 @@
     <ClInclude Include="FontBlitter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="DrawOntoDC.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FrameCounter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -42,6 +48,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="FontBlitter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DrawOntoDC.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FrameCounter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

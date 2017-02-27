@@ -137,14 +137,18 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DrawOntoDC.h" />
     <ClInclude Include="FontBlitter.h" />
+    <ClInclude Include="FrameCounter.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="win32_font_blitter.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DrawOntoDC.cpp" />
     <ClCompile Include="FontBlitter.cpp" />
+    <ClCompile Include="FrameCounter.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

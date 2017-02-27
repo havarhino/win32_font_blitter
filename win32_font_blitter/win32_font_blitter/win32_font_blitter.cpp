@@ -5,8 +5,13 @@
 #include "win32_font_blitter.h"
 #include "resource.h"
 #include "FontBlitter.h"
+#include "DrawOntoDC.h"
+#include "FrameCounter.h"
 
 #define MAX_LOADSTRING 100
+
+FrameCounter * frameCounter = new FrameCounter();
+wchar_t dbgStr[512] = L"";
 
 // Global Variables:
 HINSTANCE hInst;                                // current instance
@@ -20,6 +25,7 @@ LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
 FontBlitter * fontBlitter = 0;
+DrawOntoDC * drawOntoDC = NULL;
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -46,6 +52,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     MSG msg;
 
+#if 1
     // Main message loop:
     while (GetMessage(&msg, nullptr, 0, 0))
     {
@@ -55,7 +62,31 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             DispatchMessage(&msg);
         }
     }
+#else
+	while (true)
+	{
+		while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
+		{
+			// Translate and dispatch message
+			if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+			{
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
+			}
+		}
 
+		if (msg.message == WM_QUIT)
+		{
+			break;
+		}
+
+		// Do update, rendering and all the real game loop stuff
+	}
+#endif
+
+	delete drawOntoDC;
+	delete frameCounter;
+	drawOntoDC = NULL;
     return (int) msg.wParam;
 }
 
@@ -72,7 +103,10 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 
     wcex.cbSize = sizeof(WNDCLASSEX);
 
-    wcex.style          = CS_HREDRAW | CS_VREDRAW;
+	// The CS_OWNDC makes sure the same DC is returned each time GetDC is called.  This allows
+	// The local memory frame buffer to always be attached to the same DC.
+    wcex.style          = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
+    //wcex.style          = CS_HREDRAW | CS_VREDRAW;
     wcex.lpfnWndProc    = WndProc;
     wcex.cbClsExtra     = 0;
     wcex.cbWndExtra     = 0;
@@ -112,6 +146,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    HBITMAP myBmp = LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP1));
    fontBlitter = new FontBlitter(myBmp);
 
+   drawOntoDC = new DrawOntoDC(hWnd);
+
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
 
@@ -149,14 +185,33 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
         }
         break;
+    case WM_SIZE:
+        {
+			drawOntoDC->updateWindowDimensions();
+		}
+        break;
     case WM_PAINT:
         {
-            PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hWnd, &ps);
+			PAINTSTRUCT ps;
+			//swprintf_s(dbgStr, L"In WM_Paint: Counter=%d\n", frameCounter);
+			//OutputDebugStringW(dbgStr);
+			frameCounter->nextFrame();
 
+#if 0
+			// If you don't have the BeginPaint/EndPaint, the WM_PAINT message won't be cleared.
+			HDC hdc = BeginPaint(hWnd, &ps);
+			// TODO: Add any drawing code that uses hdc here...
+			EndPaint(hWnd, &ps); 
+#endif
+			//swprintf_s(dbgStr, L"WM_Paint: frameRate=%d\n", frameCounter->getFrameRate());
+			//OutputDebugStringW(dbgStr);
 
-            EndPaint(hWnd, &ps);
-        }
+#if 1
+			drawOntoDC->draw();
+			//swprintf_s(dbgStr, L"In WM_Paint: Counter=%d\n", frameCounter);
+			//OutputDebugStringW(dbgStr);
+#endif
+		}
         break;
     case WM_DESTROY:
         PostQuitMessage(0);
