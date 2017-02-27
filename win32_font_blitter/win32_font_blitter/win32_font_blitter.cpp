@@ -10,6 +10,8 @@
 
 #define MAX_LOADSTRING 100
 
+#undef DRAW_FROM_WM_PAINT
+
 FrameCounter * frameCounter = new FrameCounter();
 wchar_t dbgStr[512] = L"";
 
@@ -50,20 +52,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WIN32_FONT_BLITTER));
 
-    MSG msg;
+	MSG msg = {0};
 
-#if 1
-    // Main message loop:
-    while (GetMessage(&msg, nullptr, 0, 0))
-    {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
-        {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-    }
-#else
-	while (true)
+	while (msg.message != WM_QUIT)
 	{
 		while (PeekMessage(&msg, 0, 0, 0, PM_REMOVE))
 		{
@@ -75,18 +66,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			}
 		}
 
-		if (msg.message == WM_QUIT)
-		{
-			break;
-		}
-
 		// Do update, rendering and all the real game loop stuff
-	}
-#endif
+		frameCounter->nextFrame();
+		drawOntoDC->draw();
 
-	delete drawOntoDC;
-	delete frameCounter;
-	drawOntoDC = NULL;
+	}
+
+	delete drawOntoDC; drawOntoDC = NULL;
+	delete frameCounter; frameCounter = NULL;
+
     return (int) msg.wParam;
 }
 
@@ -185,40 +173,65 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
         }
         break;
+
     case WM_SIZE:
         {
 			drawOntoDC->updateWindowDimensions();
 		}
         break;
+
+    case WM_MOVE:
+        {
+		}
+        break;
+
     case WM_PAINT:
         {
-			PAINTSTRUCT ps;
-			//swprintf_s(dbgStr, L"In WM_Paint: Counter=%d\n", frameCounter);
-			//OutputDebugStringW(dbgStr);
+			// You need this if you want the client area redrawn as the user resizes the window
+			// However, this is not the main place where all the drawing occurs.  See above in the
+			// message loop (PeekMessage followed by redraw).
 			frameCounter->nextFrame();
+			drawOntoDC->draw();
 
+			// NEED THIS!!!!!!
+			// See https://blogs.msdn.microsoft.com/oldnewthing/20141203-00/?p=43483
+			//		"Suppose your window procedure doesn't paint when it gets a WM_PAINT message. What happens?
+			//
+			//		It depends on how you don't paint.
+			//
+			//		If you have an explicit handler for the WM_PAINT message that does nothing but return without 
+			//		painting, then the window manager will turn around and put a new WM_PAINT message in your 
+			//		queue. "And try harder this time." Remember that the rules for the WM_PAINT message are that 
+			//		the window manager will generate a WM_PAINT message for any window that has a dirty region.
+			//		If you fail to remove the dirty region in your WM_PAINT message handler, well, then the rules 
+			//		state that you get another WM_PAINT message. (The most common way of clearing the dirty region 
+			//		is to call Begin­Paint, but there are other less common ways, like Validate­Rect or 
+			//		Redraw­Window with the RDW_VALIDATE flag.)"
+
+			// If you don't have the BeginPaint/EndPaint (or other mechanism to clear dirty bit, like ValidateRect() ),
+			// the WM_PAINT message won't be cleared.
 #if 0
-			// If you don't have the BeginPaint/EndPaint, the WM_PAINT message won't be cleared.
+			PAINTSTRUCT ps;
 			HDC hdc = BeginPaint(hWnd, &ps);
 			// TODO: Add any drawing code that uses hdc here...
 			EndPaint(hWnd, &ps); 
+#else
+			ValidateRect(hWnd, 0);
 #endif
-			//swprintf_s(dbgStr, L"WM_Paint: frameRate=%d\n", frameCounter->getFrameRate());
-			//OutputDebugStringW(dbgStr);
 
-#if 1
-			drawOntoDC->draw();
-			//swprintf_s(dbgStr, L"In WM_Paint: Counter=%d\n", frameCounter);
-			//OutputDebugStringW(dbgStr);
-#endif
+			swprintf_s(dbgStr, L"WM_PAINT: frameRate=%d\n", frameCounter->getFrameRate());
+			OutputDebugStringW(dbgStr);
 		}
         break;
+
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
+
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
+
     return 0;
 }
 

@@ -32,8 +32,8 @@ void FrameCounter::nextFrame() {
 		frameRate = frameCounter / cumulativeTime;
 		cumulativeTime = 0.0;
 		frameCounter = 0.0;
-		//swprintf_s(dbgStr, L"WM_Paint: frameRate=%f\n", frameRate);
-		//OutputDebugStringW(dbgStr);
+		swprintf_s(dbgStr, L"FrameCounter: frameRate=%f\n", frameRate);
+		OutputDebugStringW(dbgStr);
 	}
 }
 
