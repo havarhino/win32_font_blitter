@@ -2,12 +2,13 @@
 #include <Windows.h>
 #include <wchar.h>
 #include <stdint.h>
+#include "FontBlitter.h"
 
 
 class DrawOntoDC {
 
 public:
-	DrawOntoDC(HWND hWindow);
+	DrawOntoDC(HWND hWindow, FontBlitter * inFontBlitter);
 	~DrawOntoDC(void);
 
 	void draw(void);
@@ -21,6 +22,11 @@ private:
     wchar_t dbgStr[512] = L"";
     HBRUSH regionBrush = NULL;
 	int xLoc = 0;
+	BITMAPINFO ballBmpInfo = {0};
+	uint32_t * ballArray;
+	uint32_t * ballArrayMask;
+	int ballDiameter;
+	FontBlitter * fontBlitter;
 
 
 	// DIB Bitmap things

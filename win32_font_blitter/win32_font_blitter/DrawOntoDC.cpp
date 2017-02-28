@@ -1,17 +1,48 @@
 #include "stdafx.h"
 #include "DrawOntoDC.h"
 #include <math.h>
+#include <stdlib.h>
 
 int locX = 0;
 
-DrawOntoDC::DrawOntoDC(HWND hWindow) {
+DrawOntoDC::DrawOntoDC(HWND hWindow, FontBlitter * inFontBlitter) {
 	hWnd = hWindow;
+	fontBlitter = inFontBlitter;
 	updateWindowDimensions();
+
 
 	//ballSet = new BallSet(41, mainClientRect.right, mainClientRect.bottom);
 
 	greenPen = CreatePen(PS_SOLID, 1, RGB(0, 255, 0));
     regionBrush = CreateSolidBrush(RGB(100, 200, 255));
+
+	ballDiameter = 258;
+
+	ballArray = new uint32_t[ballDiameter*ballDiameter];
+	ballArrayMask = new uint32_t[ballDiameter*ballDiameter];
+	
+	ballBmpInfo.bmiHeader.biSize = sizeof(BITMAPINFO);
+	ballBmpInfo.bmiHeader.biWidth = ballDiameter;
+	ballBmpInfo.bmiHeader.biHeight = ballDiameter;
+	ballBmpInfo.bmiHeader.biBitCount = 32;
+	ballBmpInfo.bmiHeader.biCompression = BI_RGB;
+	ballBmpInfo.bmiHeader.biPlanes = 1;
+	ballBmpInfo.bmiHeader.biSizeImage = ballDiameter * ballDiameter * 4;
+	double ballRadius = ballDiameter / 2.0;
+	for (int y = 0; y < ballDiameter; y++) {
+		for (int x = 0; x < ballDiameter; x++) {
+			double cx = (double)x - ballRadius;
+			double cy = (double)y - ballRadius;
+			if (cx*cx + cy*cy > ballRadius * ballRadius) {
+				ballArray[y*ballDiameter + x] = 0x00000000;
+				ballArrayMask[y*ballDiameter + x] = 0x00FFFFFF;
+			}
+			else {
+				ballArray[y*ballDiameter + x] = 0x0000FF00;
+				ballArrayMask[y*ballDiameter + x] = 0x00000000;
+			}
+		}
+	}
 
 	HDC hdc = GetDC(hWnd);
 
@@ -59,10 +90,12 @@ void DrawOntoDC::createDIB(HDC hdc) {
 
 }
 
+#define PI (3.1415926535)
+
 void DrawOntoDC::drawDIB(HDC hdc) {
 
-	int W = mainClientRect.right;
-	int H = mainClientRect.bottom;
+	int W = DIBwidth;
+	int H = DIBheight;
 	// Clear the background of the DIB
 	memset(m_pBitmapBits, 0, DIBrowByteWidth * DIBheight);
 
@@ -76,7 +109,6 @@ void DrawOntoDC::drawDIB(HDC hdc) {
 
 	// Draw things directly into bitmap using pointer to memory
 
-#if 0
 	///////   DRAW THE HOLLOW RED CIRCLE
 	lineCounter++;
 
@@ -86,49 +118,42 @@ void DrawOntoDC::drawDIB(HDC hdc) {
 		int x = (int)(lineCounter + cos(i)*R) % W;
 		int y = (int)(lineCounter + sin(i)*R) % H;
 		if ((x >= 0) && (x < W) && (y >= 0) && (y < H)) {
-			*getPixelAddress(x, y) = RED;
+			*getPixelAddress(x, y) = 0x00FF0000;
 		}
 	}
-#endif
 
 	//ballSet->draw(h_dibDC, W, H);
+	int x = (int)(sin((double)lineCounter/80.0)*133.0 + 203.0);
+	int y = (int)(cos((double)lineCounter/80.0)*133.0 + 203.0);
+	StretchDIBits(h_dibDC,
+		x, y, ballDiameter, ballDiameter,
+		0, 0, ballDiameter, ballDiameter,
+		ballArrayMask, &ballBmpInfo, DIB_RGB_COLORS, SRCAND);
+	StretchDIBits(h_dibDC,
+		x, y, ballDiameter, ballDiameter,
+		0, 0, ballDiameter, ballDiameter,
+		ballArray, &ballBmpInfo, DIB_RGB_COLORS, SRCPAINT);
 
+	fontBlitter->DrawLetter(h_dibDC, 'B', 300, 340);
+	fontBlitter->DrawNumber(h_dibDC, lineCounter, 300, 240);
+	fontBlitter->DrawString(h_dibDC, "ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*", 300, 440);
+
+	for (y = 0; y < 12; y++) {
+		for (x = 0; x < 40; x++) {
+			fontBlitter->DrawLetter(h_dibDC, '!' + rand() % ('Z' - '!' + 1), 100 + x * 24, 500 + y * 24);
+		}
+	}
+	
 	///////////////   DRAW REGULAR WINDOWS DRAWING THINGS
 
 	// Now, draw any Windows drawing objects
 	//    Saving the original object
 	HGDIOBJ original = SelectObject(hdc, greenPen);
 
-#if 0
-	MoveToEx(h_dibDC, 0, 0, NULL);
-	LineTo(h_dibDC, W-1,0);
-	LineTo(h_dibDC, W-1,H-1);
-	LineTo(h_dibDC, 0,H-1);
-	LineTo(h_dibDC, 0,0);
-#endif
+	//wchar_t szBuff[128];
+    //swprintf(szBuff, L"Here is a window Pointer: %p", hWnd);
 
-	wchar_t szBuff[128];
-    swprintf(szBuff, L"Here is a window Pointer: %p", hWnd);
-
-	RECT r;
-	r.left = locX;
-	r.top - 150;
-	r.right = r.left + 100;
-	r.bottom = 250;
-
-	FillRect(h_dibDC, &r, regionBrush);
-	locX++;
-	if (locX > 500) {
-		locX = 0;
-	}
-
-	TextOutW(h_dibDC, 20, 50, szBuff, wcslen(szBuff) );
-
-#if 0
-	MoveToEx(h_dibDC, xLoc % DIBwidth, 20, NULL);
-	LineTo(h_dibDC, xLoc % DIBwidth + 200, 122);
-	xLoc++;
-#endif
+	//TextOutW(h_dibDC, 20, 50, szBuff, wcslen(szBuff) );
 
 	// Now, copy the mem DC into the screen DC
 #if 0
@@ -149,13 +174,13 @@ uint32_t * DrawOntoDC::getPixelAddress(int x, int y) {
 	if (y < 0) {
 		y = 0;
 	}
-	if (x >= mainClientRect.right) {
-		x = mainClientRect.right - 1;
+	if (x >= DIBwidth) {
+		x = DIBwidth - 1;
 	}
-	if (y >= mainClientRect.bottom) {
-		y = mainClientRect.bottom - 1;
+	if (y >= DIBheight) {
+		y = DIBheight - 1;
 	}
-	uint32_t *pixel = (uint32_t *)m_pBitmapBits + mainClientRect.right * y + x;
+	uint32_t *pixel = (uint32_t *)m_pBitmapBits + DIBwidth * y + x;
 	return pixel;
 }
 

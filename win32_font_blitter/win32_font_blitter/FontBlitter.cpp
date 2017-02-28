@@ -1,9 +1,12 @@
 #include "stdafx.h"
 #include "FontBlitter.h"
+#include <math.h>
+#include <stdio.h>
 
 FontBlitter::FontBlitter(HBITMAP inBitmap) {
 
 	hBitmap = inBitmap;
+	numGlyphs = 0;
 
 	loadImages();
 }
@@ -19,16 +22,17 @@ BYTE * ToPixels(HBITMAP BitmapHandle, BITMAPINFO & info ) {
 	HBITMAP OldBitmap = (HBITMAP)SelectObject(DC, BitmapHandle);
 	GetObject(BitmapHandle, sizeof(Bmp), &Bmp);
 
+	int H = Bmp.bmHeight;
 	info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
 	info.bmiHeader.biWidth = Bmp.bmWidth;
-	info.bmiHeader.biHeight = Bmp.bmHeight;
+	info.bmiHeader.biHeight = -H;
 	info.bmiHeader.biPlanes = 1;
 	info.bmiHeader.biBitCount = Bmp.bmBitsPixel;
 	info.bmiHeader.biCompression = BI_RGB;
-	info.bmiHeader.biSizeImage = ((Bmp.bmWidth * Bmp.bmBitsPixel + 31) / 32) * 4 * Bmp.bmHeight;
+	info.bmiHeader.biSizeImage = ((Bmp.bmWidth * Bmp.bmBitsPixel + 31) / 32) * 4 * H;
 	
 	Pixels = (BYTE *)malloc(info.bmiHeader.biSizeImage * sizeof(BYTE));
-	GetDIBits(DC, BitmapHandle, 0, Bmp.bmHeight, Pixels, &info, DIB_RGB_COLORS);
+	GetDIBits(DC, BitmapHandle, 0, H, Pixels, &info, DIB_RGB_COLORS);
 	SelectObject(DC, OldBitmap);
 
 	DeleteDC(DC);
@@ -183,9 +187,93 @@ void computeGridSize(BYTE * pixels, BITMAPINFO & info, int &gridWidth, int &grid
 	free( rowTotals );
 }
 
+void FontBlitter::createGlyphs() {
+	int fontW = fontBitmapInfo.bmiHeader.biWidth;
+	int fontH = fontBitmapInfo.bmiHeader.biHeight;
+	fontH = (fontH < 0) ? -fontH : fontH;
+	int columns = fontW / cellWidth;
+	int rows = fontH / cellHeight;
+
+	numGlyphs = rows * columns;
+
+	glyphBmpInfo = {0};
+
+	glyphBmpInfo.bmiHeader.biSize = sizeof(BITMAPINFO);
+	glyphBmpInfo.bmiHeader.biWidth = cellWidth;
+	glyphBmpInfo.bmiHeader.biHeight = -cellHeight;
+	glyphBmpInfo.bmiHeader.biBitCount = 32;
+	glyphBmpInfo.bmiHeader.biCompression = BI_RGB;
+	glyphBmpInfo.bmiHeader.biPlanes = 1;
+	glyphBmpInfo.bmiHeader.biSizeImage = cellWidth * cellHeight * 4;
+
+	glyphArray = new uint32_t*[numGlyphs];
+	glyphArrayMask = new uint32_t*[numGlyphs];
+
+	uint32_t* wordBitmapDataPtr = (uint32_t*)bitmapDataPtr;
+	for (int r = 0; r < rows; r++) {
+		for (int c = 0; c < columns; c++) {
+			uint32_t * glyphDestPtr = new uint32_t[cellWidth * cellHeight];
+			uint32_t * glyphMaskDestPtr = new uint32_t[cellWidth * cellHeight];
+			glyphArray[r*columns + c] = glyphDestPtr;
+			glyphArrayMask[r*columns + c] = glyphMaskDestPtr;
+
+
+			uint32_t * glyphSrcPtr = (uint32_t*)(&wordBitmapDataPtr[(r * cellHeight) * fontW + (c*cellWidth)]);
+			for (int y = 0; y < cellHeight; y++) {
+				uint32_t * srcPtr = glyphSrcPtr;
+				uint32_t * destPtr = glyphDestPtr;
+				uint32_t * destMaskPtr = glyphMaskDestPtr;
+				for (int x = 0; x < cellWidth; x++) {
+					uint32_t v = ~(*srcPtr++);
+					*destPtr++ = v;
+					*destMaskPtr++ = ((v & 0x000F0F0F)  == 0) ? 0x00FFFFFF : 0x00000000;
+				}
+				glyphSrcPtr += fontW;
+				glyphDestPtr += cellWidth;
+				glyphMaskDestPtr += cellWidth;
+			}
+		}
+	}
+}
+
 void FontBlitter::loadImages() {
 	if (hBitmap != 0) {
 		bitmapDataPtr = ToPixels(hBitmap, fontBitmapInfo);
 		computeGridSize(bitmapDataPtr, fontBitmapInfo, cellWidth, cellHeight);
+		createGlyphs();
 	}
+}
+
+void FontBlitter::DrawLetter(HDC hdc, char c, int x, int y) {
+	int offset = c - '!';
+
+	if (offset < 0) {
+		throw "Yikes!!  Character before glyph array";
+	}
+	if (offset >= numGlyphs) {
+		throw "Yikes!!  Character beyond glyph array";
+	}
+
+	StretchDIBits(hdc,
+		x, y, cellWidth, cellHeight,
+		0, 0, cellWidth, cellHeight,
+		glyphArrayMask[offset], &glyphBmpInfo, DIB_RGB_COLORS, SRCAND);
+	StretchDIBits(hdc,
+		x, y, cellWidth, cellHeight,
+		0, 0, cellWidth, cellHeight,
+		glyphArray[offset], &glyphBmpInfo, DIB_RGB_COLORS, SRCPAINT);
+
+}
+
+void FontBlitter::DrawString(HDC hdc, char * str, int x, int y) {
+	int numDigits = strlen(str);
+	for( int i = 0; i < numDigits; i++) {
+		DrawLetter(hdc, str[i], x + i*cellWidth, y);
+	}
+}
+
+void FontBlitter::DrawNumber(HDC hdc, int N, int x, int y) {
+	char buf[100];
+	sprintf(buf, "%d", N);
+	DrawString(hdc, buf, x, y);
 }

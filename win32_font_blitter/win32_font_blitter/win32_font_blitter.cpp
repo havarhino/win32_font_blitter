@@ -134,7 +134,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    HBITMAP myBmp = LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP1));
    fontBlitter = new FontBlitter(myBmp);
 
-   drawOntoDC = new DrawOntoDC(hWnd);
+   drawOntoDC = new DrawOntoDC(hWnd, fontBlitter);
 
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
