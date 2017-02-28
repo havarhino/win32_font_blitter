@@ -75,5 +75,8 @@
     <Image Include="images\digitized.bmp">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="images\hollow.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

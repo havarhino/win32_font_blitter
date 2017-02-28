@@ -225,6 +225,9 @@ void FontBlitter::createGlyphs() {
 				uint32_t * destMaskPtr = glyphMaskDestPtr;
 				for (int x = 0; x < cellWidth; x++) {
 					uint32_t v = (*srcPtr++);
+#ifndef USE_SIMPLE
+					v = ~v;
+#endif
 					*destPtr++ = v;
 					*destMaskPtr++ = ((v & 0x000F0F0F)  == 0) ? 0x00FFFFFF : 0x00000000;
 				}
@@ -240,8 +243,13 @@ void FontBlitter::loadImages() {
 	if (hBitmap != 0) {
 		bitmapDataPtr = ToPixels(hBitmap, fontBitmapInfo);
 		//computeGridSize(bitmapDataPtr, fontBitmapInfo, cellWidth, cellHeight);
+#ifdef USE_SIMPLE
 		cellWidth = 20;
 		cellHeight = 20;
+#else
+		cellWidth = 32;
+		cellHeight = 32;
+#endif
 		createGlyphs();
 	}
 }

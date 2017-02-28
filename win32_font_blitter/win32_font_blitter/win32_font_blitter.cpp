@@ -131,7 +131,11 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
       return FALSE;
    }
 
+#ifdef USE_SIMPLE
    HBITMAP myBmp = LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP2));
+#else
+   HBITMAP myBmp = LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP3));
+#endif
    fontBlitter = new FontBlitter(myBmp);
 
    drawOntoDC = new DrawOntoDC(hWnd, fontBlitter);

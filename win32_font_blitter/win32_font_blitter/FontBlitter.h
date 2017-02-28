@@ -5,6 +5,8 @@
 #define WHITE_THRESHOLD (250)
 #define BLACK_THRESHOLD (5)
 
+#define USE_SIMPLE
+
 class FontBlitter {
 
 public:

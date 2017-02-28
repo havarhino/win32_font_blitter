@@ -163,6 +163,7 @@
   <ItemGroup>
     <Image Include="images\1930__W_24__H_24.bmp" />
     <Image Include="images\digitized.bmp" />
+    <Image Include="images\hollow.bmp" />
     <Image Include="small.ico" />
     <Image Include="win32_font_blitter.ico" />
   </ItemGroup>
