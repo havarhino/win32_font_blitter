@@ -72,5 +72,8 @@
     <Image Include="images\1930__W_24__H_24.bmp">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="images\digitized.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

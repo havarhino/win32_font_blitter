@@ -125,6 +125,7 @@ void DrawOntoDC::drawDIB(HDC hdc) {
 	//ballSet->draw(h_dibDC, W, H);
 	int x = (int)(sin((double)lineCounter/80.0)*133.0 + 203.0);
 	int y = (int)(cos((double)lineCounter/80.0)*133.0 + 203.0);
+
 	StretchDIBits(h_dibDC,
 		x, y, ballDiameter, ballDiameter,
 		0, 0, ballDiameter, ballDiameter,
@@ -134,13 +135,17 @@ void DrawOntoDC::drawDIB(HDC hdc) {
 		0, 0, ballDiameter, ballDiameter,
 		ballArray, &ballBmpInfo, DIB_RGB_COLORS, SRCPAINT);
 
-	fontBlitter->DrawLetter(h_dibDC, 'B', 300, 340);
-	fontBlitter->DrawNumber(h_dibDC, lineCounter, 300, 240);
-	fontBlitter->DrawString(h_dibDC, "ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*", 300, 440);
+	fontBlitter->DrawNumber(h_dibDC, lineCounter, 10, 10);
+	fontBlitter->DrawString(h_dibDC, "ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*", 10, 35);
+	fontBlitter->DrawString(h_dibDC, "0123456789 !@#$%^&*(){}[];:'\",.<>/?`~", 10, 60);
 
+	int wiggle = 14;
+	int halfwiggle = wiggle / 2;
 	for (y = 0; y < 12; y++) {
 		for (x = 0; x < 40; x++) {
-			fontBlitter->DrawLetter(h_dibDC, '!' + rand() % ('Z' - '!' + 1), 100 + x * 24, 500 + y * 24);
+			fontBlitter->DrawLetter(h_dibDC, '!' + rand() % ('Z' - '!' + 1),
+				    10 + x * 24 + rand() % wiggle - halfwiggle,
+				    100 + y * 24 + rand() % wiggle - halfwiggle);
 		}
 	}
 	

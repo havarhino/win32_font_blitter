@@ -224,7 +224,7 @@ void FontBlitter::createGlyphs() {
 				uint32_t * destPtr = glyphDestPtr;
 				uint32_t * destMaskPtr = glyphMaskDestPtr;
 				for (int x = 0; x < cellWidth; x++) {
-					uint32_t v = ~(*srcPtr++);
+					uint32_t v = (*srcPtr++);
 					*destPtr++ = v;
 					*destMaskPtr++ = ((v & 0x000F0F0F)  == 0) ? 0x00FFFFFF : 0x00000000;
 				}
@@ -239,13 +239,15 @@ void FontBlitter::createGlyphs() {
 void FontBlitter::loadImages() {
 	if (hBitmap != 0) {
 		bitmapDataPtr = ToPixels(hBitmap, fontBitmapInfo);
-		computeGridSize(bitmapDataPtr, fontBitmapInfo, cellWidth, cellHeight);
+		//computeGridSize(bitmapDataPtr, fontBitmapInfo, cellWidth, cellHeight);
+		cellWidth = 20;
+		cellHeight = 20;
 		createGlyphs();
 	}
 }
 
 void FontBlitter::DrawLetter(HDC hdc, char c, int x, int y) {
-	int offset = c - '!';
+	int offset = c;
 
 	if (offset < 0) {
 		throw "Yikes!!  Character before glyph array";
@@ -254,6 +256,7 @@ void FontBlitter::DrawLetter(HDC hdc, char c, int x, int y) {
 		throw "Yikes!!  Character beyond glyph array";
 	}
 
+#if 1
 	StretchDIBits(hdc,
 		x, y, cellWidth, cellHeight,
 		0, 0, cellWidth, cellHeight,
@@ -262,6 +265,12 @@ void FontBlitter::DrawLetter(HDC hdc, char c, int x, int y) {
 		x, y, cellWidth, cellHeight,
 		0, 0, cellWidth, cellHeight,
 		glyphArray[offset], &glyphBmpInfo, DIB_RGB_COLORS, SRCPAINT);
+#else
+	StretchDIBits(hdc,
+		x, y, cellWidth, cellHeight,
+		0, 0, cellWidth, cellHeight,
+		glyphArray[offset], &glyphBmpInfo, DIB_RGB_COLORS, SRCCOPY);
+#endif
 
 }
 
