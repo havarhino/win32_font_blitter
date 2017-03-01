@@ -8,6 +8,7 @@
 #include "DrawOntoDC.h"
 #include "FrameCounter.h"
 
+
 #define MAX_LOADSTRING 100
 
 #undef DRAW_FROM_WM_PAINT
