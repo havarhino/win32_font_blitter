@@ -73,6 +73,9 @@ ipch/
 *.sdf
 *.cachefile
 
+# TF: 2017/3/3
+*.opendb
+
 # Visual Studio profiler
 *.psess
 *.vsp
