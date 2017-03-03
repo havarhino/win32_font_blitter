@@ -3,12 +3,26 @@
 #include <math.h>
 #include <stdio.h>
 
-FontBlitter::FontBlitter(HBITMAP inBitmap) {
-
+void FontBlitter::commonConstructor(HBITMAP inBitmap, int inFirstGlyphOffset, bool inInvertGlyphColor, int inCellWidth, int inCellHeight) {
 	hBitmap = inBitmap;
 	numGlyphs = 0;
 
+	firstGlyphOffset = inFirstGlyphOffset;
+	invertGlyphColor = inInvertGlyphColor;
+	cellWidth = inCellWidth;
+	cellHeight = inCellHeight;
+
 	loadImages();
+}
+
+FontBlitter::FontBlitter(HBITMAP inBitmap, int inFirstGlyphOffset, bool inInvertGlyphColor) {
+
+	commonConstructor(inBitmap, inFirstGlyphOffset, inInvertGlyphColor, -1, -1);
+}
+
+FontBlitter::FontBlitter(HBITMAP inBitmap, int inFirstGlyphOffset, bool inInvertGlyphColor, int inCellWidth, int inCellHeight) {
+
+	commonConstructor(inBitmap, inFirstGlyphOffset, inInvertGlyphColor, inCellWidth, inCellHeight);
 }
 
 // This function will allocate memory and fill that memory with the bitmap raw bitmap data.
@@ -225,9 +239,9 @@ void FontBlitter::createGlyphs() {
 				uint32_t * destMaskPtr = glyphMaskDestPtr;
 				for (int x = 0; x < cellWidth; x++) {
 					uint32_t v = (*srcPtr++);
-#ifndef USE_SIMPLE
-					v = ~v;
-#endif
+					if( invertGlyphColor ) {
+						v = ~v;
+					}
 					*destPtr++ = v;
 					*destMaskPtr++ = ((v & 0x000F0F0F)  == 0) ? 0x00FFFFFF : 0x00000000;
 				}
@@ -242,26 +256,21 @@ void FontBlitter::createGlyphs() {
 void FontBlitter::loadImages() {
 	if (hBitmap != 0) {
 		bitmapDataPtr = ToPixels(hBitmap, fontBitmapInfo);
-		//computeGridSize(bitmapDataPtr, fontBitmapInfo, cellWidth, cellHeight);
-#ifdef USE_SIMPLE
-		cellWidth = 20;
-		cellHeight = 20;
-#else
-		cellWidth = 32;
-		cellHeight = 32;
-#endif
+		if( (cellWidth < 0) || (cellHeight < 0) ) {
+			computeGridSize(bitmapDataPtr, fontBitmapInfo, cellWidth, cellHeight);
+		}
 		createGlyphs();
 	}
 }
 
 void FontBlitter::DrawLetter(HDC hdc, char c, int x, int y) {
-	int offset = c;
+	int offset = c - firstGlyphOffset;
 
 	if (offset < 0) {
-		throw "Yikes!!  Character before glyph array";
+		return;
 	}
 	if (offset >= numGlyphs) {
-		throw "Yikes!!  Character beyond glyph array";
+		return;
 	}
 
 #if 1

@@ -27,7 +27,7 @@ BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
-FontBlitter * fontBlitter = 0;
+FontBlitter ** fontBlitterArray = 0;
 DrawOntoDC * drawOntoDC = NULL;
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
@@ -132,14 +132,18 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
       return FALSE;
    }
 
-#ifdef USE_SIMPLE
-   HBITMAP myBmp = LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP2));
-#else
-   HBITMAP myBmp = LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP3));
-#endif
-   fontBlitter = new FontBlitter(myBmp);
+   fontBlitterArray = new FontBlitter *[3];
 
-   drawOntoDC = new DrawOntoDC(hWnd, fontBlitter);
+   HBITMAP myBmp = LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP1));
+   fontBlitterArray[0] = new FontBlitter(myBmp, '!', true, 24, 24);
+
+   myBmp = LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP2));
+   fontBlitterArray[1] = new FontBlitter(myBmp, 0, false, 20, 20);
+
+   myBmp = LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP3));
+   fontBlitterArray[2] = new FontBlitter(myBmp, 0, true, 32, 32);
+
+   drawOntoDC = new DrawOntoDC(hWnd, fontBlitterArray);
 
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);

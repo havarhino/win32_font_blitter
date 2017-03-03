@@ -5,9 +5,10 @@
 
 int locX = 0;
 
-DrawOntoDC::DrawOntoDC(HWND hWindow, FontBlitter * inFontBlitter) {
+DrawOntoDC::DrawOntoDC(HWND hWindow, FontBlitter ** inFontBlitterArray) {
 	hWnd = hWindow;
-	fontBlitter = inFontBlitter;
+	fontBlitterArray = inFontBlitterArray;
+	fontBlitter = inFontBlitterArray[1];
 	updateWindowDimensions();
 
 
@@ -143,7 +144,7 @@ void DrawOntoDC::drawDIB(HDC hdc) {
 	int halfwiggle = wiggle / 2;
 	for (y = 0; y < 12; y++) {
 		for (x = 0; x < 40; x++) {
-			fontBlitter->DrawLetter(h_dibDC, '!' + rand() % ('Z' - '!' + 1),
+			fontBlitterArray[rand()%3]->DrawLetter(h_dibDC, '!' + rand() % ('Z' - '!' + 1),
 				    10 + x * 24 + rand() % wiggle - halfwiggle,
 				    100 + y * 24 + rand() % wiggle - halfwiggle);
 		}

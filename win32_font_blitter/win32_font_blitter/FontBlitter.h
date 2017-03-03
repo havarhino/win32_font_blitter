@@ -5,12 +5,12 @@
 #define WHITE_THRESHOLD (250)
 #define BLACK_THRESHOLD (5)
 
-#define USE_SIMPLE
-
 class FontBlitter {
 
 public:
-	FontBlitter(HBITMAP inBitmap);
+	void commonConstructor(HBITMAP inBitmap, int inFirstGlyphOffset, bool inInvertGlyphColor, int inCellWidth, int inCellHeight);
+	FontBlitter(HBITMAP inBitmap, int inFirstGlyphOffset, bool inInvertGlyphColor);
+	FontBlitter(HBITMAP inBitmap, int inFirstGlyphOffset, bool inInvertGlyphColor, int inCellWidth, int inCellHeight);
 	void DrawLetter(HDC hdc, char c, int x, int y);
 	void DrawNumber(HDC hdc, int N, int x, int y);
 	void DrawString(HDC hdc, char * str, int x, int y);
@@ -20,6 +20,8 @@ private:
 	HBITMAP hBitmap = 0;
 	int cellWidth = -1;
 	int cellHeight = -1;
+	int firstGlyphOffset = -1;
+	bool invertGlyphColor = false;
 	BYTE * bitmapDataPtr = 0;
 	int numGlyphs;
 

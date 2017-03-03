@@ -8,7 +8,7 @@
 class DrawOntoDC {
 
 public:
-	DrawOntoDC(HWND hWindow, FontBlitter * inFontBlitter);
+	DrawOntoDC(HWND hWindow, FontBlitter ** inFontBlitterArray);
 	~DrawOntoDC(void);
 
 	void draw(void);
@@ -27,6 +27,7 @@ private:
 	uint32_t * ballArrayMask;
 	int ballDiameter;
 	FontBlitter * fontBlitter;
+	FontBlitter ** fontBlitterArray;
 
 
 	// DIB Bitmap things
