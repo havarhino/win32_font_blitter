@@ -1,35 +1,48 @@
 #pragma once
-#include "stdafx.h"
 #include <stdint.h>
 
-#define WHITE_THRESHOLD (250)
-#define BLACK_THRESHOLD (5)
+typedef struct {
+	int pixelWidth;
+	int pixelHeight;
+	int planes;
+	int bitsPerPixel;
+	uint32_t * dataPtr;
+} PixelMemory;
+
+typedef struct {
+	int left;
+	int top;
+	int right;
+	int bottom;
+} BoundingBox;
 
 class FontBlitter {
 
 public:
-	void commonConstructor(HBITMAP inBitmap, int inFirstGlyphOffset, bool inInvertGlyphColor, int inCellWidth, int inCellHeight);
+	/*
+	void commonHBITMAPConstructor(HBITMAP inBitmap, int inFirstGlyphOffset, bool inInvertGlyphColor, int inCellWidth, int inCellHeight);
 	FontBlitter(HBITMAP inBitmap, int inFirstGlyphOffset, bool inInvertGlyphColor);
 	FontBlitter(HBITMAP inBitmap, int inFirstGlyphOffset, bool inInvertGlyphColor, int inCellWidth, int inCellHeight);
-	void DrawLetter(HDC hdc, char c, int x, int y);
-	void DrawNumber(HDC hdc, int N, int x, int y);
-	void DrawString(HDC hdc, char * str, int x, int y);
+	*/
+	FontBlitter(PixelMemory * pixels, int inFirstGlyphOffset, bool inInvertGlyphColor, int inCellWidth, int inCellHeight);
+	void DrawLetter(PixelMemory * destPM, char c, int x, int y);
+	void DrawNumber(PixelMemory * destPM, int N, int x, int y);
+	void DrawString(PixelMemory * destPM, char * str, int x, int y);
+	void GetBoundingBox(PixelMemory * destPM, char * str, int x, int y, BoundingBox * bb);
 
 private:
-	BITMAPINFO fontBitmapInfo = { 0 };
-	HBITMAP hBitmap = 0;
 	int cellWidth = -1;
 	int cellHeight = -1;
 	int firstGlyphOffset = -1;
 	bool invertGlyphColor = false;
-	BYTE * bitmapDataPtr = 0;
+
+	PixelMemory pm = { 0 };
+
 	int numGlyphs;
 
-	BITMAPINFO glyphBmpInfo = {0};
 	uint32_t ** glyphArray;
 	uint32_t ** glyphArrayMask;
 
-	void loadImages();
 	void createGlyphs();
 
 };

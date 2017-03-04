@@ -7,6 +7,7 @@
 #include "FontBlitter.h"
 #include "DrawOntoDC.h"
 #include "FrameCounter.h"
+#include <mutex>
 
 
 #define MAX_LOADSTRING 100
@@ -15,7 +16,129 @@
 
 FrameCounter * frameCounter = new FrameCounter();
 wchar_t dbgStr[512] = L"";
+RECT mainClientRect;
+HDC h_dibDC = 0;
+HBITMAP m_hDIBBitmap = 0;
+HBITMAP m_hOldDIBBitmap = 0;
+DrawMemory dm;
 
+void log(LPCWSTR str) {
+	OutputDebugStringW(str);
+}
+void log_1d(LPCWSTR str, int d1) {
+	swprintf_s(dbgStr, str, d1);
+	OutputDebugStringW(str);
+}
+void log_2d(LPCWSTR str, int d1, int d2) {
+	swprintf_s(dbgStr, str, d1, d2);
+	OutputDebugStringW(dbgStr);
+}
+
+FontBlitter ** fontBlitterArray = 0;
+DrawOntoDC * drawOntoDC = NULL;
+std::mutex drawOntoDC_Mutex;
+
+// This function will allocate memory and fill that memory with the bitmap raw bitmap data.
+// The caller of this method is responsible for free'ing the returned pointer, if it is non-null.
+PixelMemory ToPixels(HBITMAP BitmapHandle) {
+	BITMAP Bmp = { 0 };
+	BYTE * Pixels = 0;
+	BITMAPINFO info = { 0 };
+
+	HDC DC = CreateCompatibleDC(NULL);
+	//memset(&info, 0, sizeof(BITMAPINFO)); //not necessary really..
+	HBITMAP OldBitmap = (HBITMAP)SelectObject(DC, BitmapHandle);
+	GetObject(BitmapHandle, sizeof(Bmp), &Bmp);
+
+	int H = Bmp.bmHeight;
+	info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+	info.bmiHeader.biWidth = Bmp.bmWidth;
+	info.bmiHeader.biHeight = -H;
+	info.bmiHeader.biPlanes = 1;
+	info.bmiHeader.biBitCount = Bmp.bmBitsPixel;
+	info.bmiHeader.biCompression = BI_RGB;
+	info.bmiHeader.biSizeImage = ((Bmp.bmWidth * Bmp.bmBitsPixel + 31) / 32) * 4 * H;
+	
+	Pixels = (BYTE *)malloc(info.bmiHeader.biSizeImage * sizeof(BYTE));
+	GetDIBits(DC, BitmapHandle, 0, H, Pixels, &info, DIB_RGB_COLORS);
+
+	SelectObject(DC, OldBitmap);
+	DeleteDC(DC);
+
+	PixelMemory pm = { 0 };
+	pm.bitsPerPixel = Bmp.bmBitsPixel;
+	pm.dataPtr = (uint32_t *)Pixels;
+	pm.pixelWidth = Bmp.bmWidth;
+	pm.pixelHeight = H;
+	pm.planes = 1;
+	return pm;
+}
+
+
+FontBlitter ** createFontBlitters(HINSTANCE hInstance) {
+   fontBlitterArray = new FontBlitter *[3];
+
+   PixelMemory pm;
+
+   HBITMAP myBmp = LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP1));
+   pm = ToPixels(myBmp);
+   fontBlitterArray[0] = new FontBlitter(&pm, '!', true, 24, 24);
+
+   myBmp = LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP2));
+   pm = ToPixels(myBmp);
+   fontBlitterArray[1] = new FontBlitter(&pm, 0, false, 20, 20);
+
+   myBmp = LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP3));
+   pm = ToPixels(myBmp);
+   fontBlitterArray[2] = new FontBlitter(&pm, 0, true, 32, 32);
+
+   return fontBlitterArray;
+}
+
+DrawMemory CreateDrawMemory(HWND hWnd) {
+	DrawMemory dm = { 0 };
+	HDC hdc = GetDC(hWnd);
+
+	GetClientRect(hWnd, &mainClientRect);
+
+	// Creating the DIB to draw in
+	BITMAPINFO mybmi;
+
+	int bitCount = 32;
+	dm.pixelWidth  = mainClientRect.right;
+	dm.pixelHeight = mainClientRect.bottom;
+	dm.bitsPerPixel = bitCount;
+	dm.planes = 1;
+	int DIBrowByteWidth = ((dm.pixelWidth * (bitCount / 8) + 3) & -4);
+	int totalBytes = DIBrowByteWidth * dm.pixelHeight;
+
+	////// This is the BITMAPINFO structure values for the Green Ball
+	mybmi.bmiHeader.biSize = sizeof(mybmi);
+	mybmi.bmiHeader.biWidth = dm.pixelWidth;
+	mybmi.bmiHeader.biHeight = -dm.pixelHeight;
+	mybmi.bmiHeader.biPlanes = 1;
+	mybmi.bmiHeader.biBitCount = bitCount;
+	mybmi.bmiHeader.biCompression = BI_RGB;
+	mybmi.bmiHeader.biSizeImage = totalBytes;
+	mybmi.bmiHeader.biXPelsPerMeter = 0;
+	mybmi.bmiHeader.biYPelsPerMeter = 0;
+
+	h_dibDC = CreateCompatibleDC(hdc);
+	m_hDIBBitmap = CreateDIBSection(hdc, &mybmi, DIB_RGB_COLORS, (VOID **)&(dm.dataPtr), NULL, 0);
+	m_hOldDIBBitmap = (HBITMAP)SelectObject(h_dibDC, m_hDIBBitmap);
+
+	ReleaseDC(hWnd, hdc);
+
+	return dm;
+}
+
+void FreeDrawMemory() {
+	SelectObject(h_dibDC, m_hOldDIBBitmap );
+	DeleteDC(h_dibDC);
+	DeleteObject(m_hDIBBitmap);
+}
+
+/**************** Standard Windows Function *************/
 // Global Variables:
 HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
@@ -27,8 +150,6 @@ BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
-FontBlitter ** fontBlitterArray = 0;
-DrawOntoDC * drawOntoDC = NULL;
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -68,13 +189,23 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		}
 
 		// Do update, rendering and all the real game loop stuff
-		frameCounter->nextFrame();
-		drawOntoDC->draw();
-
+		drawOntoDC_Mutex.lock();
+		if (drawOntoDC != 0) {
+			frameCounter->nextFrame();
+			drawOntoDC->draw();
+			HDC hdc = GetDC(msg.hwnd);
+			BitBlt(hdc, 0, 0, dm.pixelWidth, dm.pixelHeight, h_dibDC, 0, 0, SRCCOPY);
+			ReleaseDC(msg.hwnd, hdc);
+		}
+		drawOntoDC_Mutex.unlock();
 	}
 
-	delete drawOntoDC; drawOntoDC = NULL;
 	delete frameCounter; frameCounter = NULL;
+
+	drawOntoDC_Mutex.lock();
+	delete drawOntoDC; drawOntoDC = NULL;
+	FreeDrawMemory();
+	drawOntoDC_Mutex.unlock();
 
     return (int) msg.wParam;
 }
@@ -132,18 +263,12 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
       return FALSE;
    }
 
-   fontBlitterArray = new FontBlitter *[3];
+   fontBlitterArray = createFontBlitters(hInstance);
 
-   HBITMAP myBmp = LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP1));
-   fontBlitterArray[0] = new FontBlitter(myBmp, '!', true, 24, 24);
-
-   myBmp = LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP2));
-   fontBlitterArray[1] = new FontBlitter(myBmp, 0, false, 20, 20);
-
-   myBmp = LoadBitmap(hInstance, MAKEINTRESOURCE(IDB_BITMAP3));
-   fontBlitterArray[2] = new FontBlitter(myBmp, 0, true, 32, 32);
-
-   drawOntoDC = new DrawOntoDC(hWnd, fontBlitterArray);
+   drawOntoDC_Mutex.lock();
+   dm = CreateDrawMemory(hWnd);
+   drawOntoDC = new DrawOntoDC(&dm, fontBlitterArray);
+   drawOntoDC_Mutex.unlock();
 
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
@@ -188,7 +313,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     case WM_SIZE:
         {
-			drawOntoDC->updateWindowDimensions();
+			drawOntoDC_Mutex.lock();
+			delete drawOntoDC; drawOntoDC = 0;
+			FreeDrawMemory();
+
+			dm = CreateDrawMemory(hWnd);
+			drawOntoDC = new DrawOntoDC(&dm, fontBlitterArray);
+
+			if (drawOntoDC != 0) {
+				frameCounter->nextFrame();
+				drawOntoDC->draw();
+				HDC hdc = GetDC(hWnd);
+				BitBlt(hdc, 0, 0, dm.pixelWidth, dm.pixelHeight, h_dibDC, 0, 0, SRCCOPY);
+				ReleaseDC(hWnd, hdc);
+			}
+			drawOntoDC_Mutex.unlock();
 		}
         break;
 
@@ -202,8 +341,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			// You need this if you want the client area redrawn as the user resizes the window
 			// However, this is not the main place where all the drawing occurs.  See above in the
 			// message loop (PeekMessage followed by redraw).
-			frameCounter->nextFrame();
-			drawOntoDC->draw();
+			if (drawOntoDC != 0) {
+				frameCounter->nextFrame();
+				drawOntoDC->draw();
+				HDC hdc = GetDC(hWnd);
+				BitBlt(hdc, 0, 0, dm.pixelWidth, dm.pixelHeight, h_dibDC, 0, 0, SRCCOPY);
+				ReleaseDC(hWnd, hdc);
+			}
 
 			// NEED THIS!!!!!!
 			// See https://blogs.msdn.microsoft.com/oldnewthing/20141203-00/?p=43483
