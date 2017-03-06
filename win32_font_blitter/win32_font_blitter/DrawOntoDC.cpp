@@ -47,18 +47,19 @@ void drawBitmap(DrawMemory * dm, int destX, int destY, uint32_t * srcPtr, int sr
 		return;
 	}
 
-	if (destY + srcH > dm->pixelHeight) {
-		srcH = dm->pixelHeight - destY;
-	}
-	if (destX + srcW > dm->pixelWidth) {
-		srcW = dm->pixelWidth - destX;
-	}
-
-	int startY = destY;
-	int startX = destX;
 	int drawWidth = srcW;
 	int drawHeight = srcH;
+	int startY = destY;
+	int startX = destX;
 	uint32_t * startSrc = srcPtr;
+
+	if (destX + drawWidth > dm->pixelWidth) {
+		drawWidth = dm->pixelWidth - destX;
+	}
+	if (destY + drawHeight > dm->pixelHeight) {
+		drawHeight = dm->pixelHeight - destY;
+	}
+
 	if (startY < 0) {
 		int beginningLinesToRemove = -startY;
 		startY = 0;
@@ -107,16 +108,15 @@ void DrawOntoDC::drawDIB() {
 	}
 
 	//ballSet->draw(h_dibDC, W, H);
-	int x = (int)(sin((double)lineCounter/80.0)*270.0 + 203.0);
-	int y = (int)(cos((double)lineCounter/80.0)*240.0 + 203.0);
+	int x = (int)(sin((double)lineCounter / 80.0)*270.0 + 203.0);
+	int y = (int)(cos((double)lineCounter / 80.0)*240.0 + 203.0);
 	drawBitmap(&dm, x, y, ballArray, ballDiameter, ballDiameter);
 
 #if 0
-	x = (int)(sin((double)(lineCounter+40)/80.0)*550.0 + 203.0);
-	y = (int)(cos((double)(lineCounter+40)/80.0)*550.0 + 203.0);
+	x = (int)(sin((double)(lineCounter + 40) / 80.0)*550.0 + 203.0);
+	y = (int)(cos((double)(lineCounter + 40) / 80.0)*550.0 + 203.0);
 	drawBitmap(&dm, x, y, ballArray, ballDiameter, ballDiameter);
 #endif
-
 
 	PixelMemory pm;
 	pm.bitsPerPixel = dm.bitsPerPixel;
@@ -125,22 +125,33 @@ void DrawOntoDC::drawDIB() {
 	pm.pixelHeight = dm.pixelHeight;
 	pm.planes = dm.planes;
 
-	fontBlitter->DrawNumber(&pm, lineCounter, 10, 35);
-	fontBlitter->DrawString(&pm, "ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*", 10, 60);
-	fontBlitter->DrawString(&pm, "0123456789 !@#$%^&*(){}[];:'\",.<>/?`~", 10, 85);
-
 	BoundingBox bb;
 	fontBlitter->GetBoundingBox(&pm, "O", 0, 0, &bb);
 	fontBlitter->DrawLetter(&pm, 'O', -5, 10);
-	fontBlitter->DrawLetter(&pm, 'O', 10, -bb.bottom/2);
+	fontBlitter->DrawLetter(&pm, 'O', 10, -bb.bottom / 2);
 	fontBlitter->DrawLetter(&pm, 'O', -200, 10);
 	fontBlitter->DrawLetter(&pm, 'O', 10, -100);
 	fontBlitter->DrawLetter(&pm, 'O', -200, -100);
-	fontBlitter->DrawLetter(&pm, 'O', pm.pixelWidth - bb.right, pm.pixelHeight-bb.bottom/2);
-	fontBlitter->DrawLetter(&pm, 'O', pm.pixelWidth - bb.right/4, pm.pixelHeight-bb.bottom);
-	fontBlitter->DrawLetter(&pm, 'O', pm.pixelWidth - bb.right, pm.pixelHeight+bb.bottom/2);
-	fontBlitter->DrawLetter(&pm, 'O', pm.pixelWidth + bb.right/4, pm.pixelHeight-bb.bottom);
-	fontBlitter->DrawLetter(&pm, 'O', pm.pixelWidth + bb.right/4, pm.pixelHeight+bb.bottom);
+	fontBlitter->DrawLetter(&pm, 'O', pm.pixelWidth - bb.right, pm.pixelHeight - bb.bottom / 2);
+	fontBlitter->DrawLetter(&pm, 'O', pm.pixelWidth - bb.right / 4, pm.pixelHeight - bb.bottom);
+	fontBlitter->DrawLetter(&pm, 'O', pm.pixelWidth - bb.right, pm.pixelHeight + bb.bottom / 2);
+	fontBlitter->DrawLetter(&pm, 'O', pm.pixelWidth + bb.right / 4, pm.pixelHeight - bb.bottom);
+	fontBlitter->DrawLetter(&pm, 'O', pm.pixelWidth + bb.right / 4, pm.pixelHeight + bb.bottom);
+
+	int currentY = 35;
+	int lineHeight = 25;
+	fontBlitter->DrawNumber(&pm, lineCounter, 10, currentY);
+	currentY += lineHeight;
+	fontBlitter->DrawProportionalNumber(&pm, lineCounter, 10, currentY, 4);
+	currentY += lineHeight;
+	fontBlitter->DrawString(&pm, "ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*", 10, currentY);
+	currentY += lineHeight;
+	for (int i = 0; i < 10; i++) {
+		fontBlitter->DrawProportionalString(&pm, "ABCDEFGHIJKLMNOPQRSTUVWXYZ!@ 01234567890123456789  #$%^&* /// \".-,'_", 10, currentY, i);
+		currentY += lineHeight;
+	}
+	fontBlitter->DrawString(&pm, "0123456789 !@#$%^&*(){}[];:'\",.<>/?`~", 10, currentY);
+	currentY += lineHeight;
 
 	int wiggle = 14;
 	int halfwiggle = wiggle / 2;
@@ -148,7 +159,7 @@ void DrawOntoDC::drawDIB() {
 		for (x = 0; x < pm.pixelWidth/24 ; x++) {
 			fontBlitterArray[rand()%3]->DrawLetter(&pm, '!' + rand() % ('Z' - '!' + 1),
 				    10 + x * 24 + rand() % wiggle - halfwiggle,
-				    120 + y * 24 + rand() % wiggle - halfwiggle);
+				    currentY + y * 24 + rand() % wiggle - halfwiggle);
 		}
 	}
 	

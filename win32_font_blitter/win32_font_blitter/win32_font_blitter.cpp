@@ -35,7 +35,7 @@ void log_2d(LPCWSTR str, int d1, int d2) {
 }
 
 FontBlitter ** fontBlitterArray = 0;
-DrawOntoDC * drawOntoDC = NULL;
+DrawOntoDC * drawOntoDC = 0;
 std::mutex drawOntoDC_Mutex;
 
 // This function will allocate memory and fill that memory with the bitmap raw bitmap data.
@@ -152,29 +152,29 @@ INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-                     _In_opt_ HINSTANCE hPrevInstance,
-                     _In_ LPWSTR    lpCmdLine,
-                     _In_ int       nCmdShow)
+	_In_opt_ HINSTANCE hPrevInstance,
+	_In_ LPWSTR    lpCmdLine,
+	_In_ int       nCmdShow)
 {
-    UNREFERENCED_PARAMETER(hPrevInstance);
-    UNREFERENCED_PARAMETER(lpCmdLine);
+	UNREFERENCED_PARAMETER(hPrevInstance);
+	UNREFERENCED_PARAMETER(lpCmdLine);
 
-    // TODO: Place code here.
+	// TODO: Place code here.
 
-    // Initialize global strings
-    LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    LoadStringW(hInstance, IDC_WIN32_FONT_BLITTER, szWindowClass, MAX_LOADSTRING);
-    MyRegisterClass(hInstance);
+	// Initialize global strings
+	LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
+	LoadStringW(hInstance, IDC_WIN32_FONT_BLITTER, szWindowClass, MAX_LOADSTRING);
+	MyRegisterClass(hInstance);
 
-    // Perform application initialization:
-    if (!InitInstance (hInstance, nCmdShow))
-    {
-        return FALSE;
-    }
+	// Perform application initialization:
+	if (!InitInstance(hInstance, nCmdShow))
+	{
+		return FALSE;
+	}
 
-    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WIN32_FONT_BLITTER));
+	HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WIN32_FONT_BLITTER));
 
-	MSG msg = {0};
+	MSG msg = { 0 };
 
 	while (msg.message != WM_QUIT)
 	{
@@ -203,8 +203,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	delete frameCounter; frameCounter = NULL;
 
 	drawOntoDC_Mutex.lock();
-	delete drawOntoDC; drawOntoDC = NULL;
-	FreeDrawMemory();
+	if (drawOntoDC != 0) {
+		delete drawOntoDC; drawOntoDC = 0;
+		FreeDrawMemory();
+	}
 	drawOntoDC_Mutex.unlock();
 
     return (int) msg.wParam;
@@ -265,13 +267,13 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
    fontBlitterArray = createFontBlitters(hInstance);
 
+   ShowWindow(hWnd, nCmdShow);
+   UpdateWindow(hWnd);
+
    drawOntoDC_Mutex.lock();
    dm = CreateDrawMemory(hWnd);
    drawOntoDC = new DrawOntoDC(&dm, fontBlitterArray);
    drawOntoDC_Mutex.unlock();
-
-   ShowWindow(hWnd, nCmdShow);
-   UpdateWindow(hWnd);
 
    return TRUE;
 }
@@ -314,18 +316,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_SIZE:
         {
 			drawOntoDC_Mutex.lock();
-			delete drawOntoDC; drawOntoDC = 0;
-			FreeDrawMemory();
-
-			dm = CreateDrawMemory(hWnd);
-			drawOntoDC = new DrawOntoDC(&dm, fontBlitterArray);
-
 			if (drawOntoDC != 0) {
-				frameCounter->nextFrame();
-				drawOntoDC->draw();
-				HDC hdc = GetDC(hWnd);
-				BitBlt(hdc, 0, 0, dm.pixelWidth, dm.pixelHeight, h_dibDC, 0, 0, SRCCOPY);
-				ReleaseDC(hWnd, hdc);
+				delete drawOntoDC; drawOntoDC = 0;
+				FreeDrawMemory();
+
+				dm = CreateDrawMemory(hWnd);
+				drawOntoDC = new DrawOntoDC(&dm, fontBlitterArray);
+
+				if (drawOntoDC != 0) {
+					frameCounter->nextFrame();
+					drawOntoDC->draw();
+					HDC hdc = GetDC(hWnd);
+					BitBlt(hdc, 0, 0, dm.pixelWidth, dm.pixelHeight, h_dibDC, 0, 0, SRCCOPY);
+					ReleaseDC(hWnd, hdc);
+				}
 			}
 			drawOntoDC_Mutex.unlock();
 		}
@@ -381,6 +385,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
 
     case WM_DESTROY:
+		if (drawOntoDC != 0) {
+			delete drawOntoDC; drawOntoDC = 0;
+			FreeDrawMemory();
+		}
         PostQuitMessage(0);
         break;
 

@@ -26,8 +26,11 @@ public:
 	*/
 	FontBlitter(PixelMemory * pixels, int inFirstGlyphOffset, bool inInvertGlyphColor, int inCellWidth, int inCellHeight);
 	void DrawLetter(PixelMemory * destPM, char c, int x, int y);
+	int DrawProportionalLetter(PixelMemory * destPM, char c, int x, int y, unsigned char ** hLineOffsets, int extraSpacing);
 	void DrawNumber(PixelMemory * destPM, int N, int x, int y);
+	void DrawProportionalNumber(PixelMemory * destPM, int N, int x, int y, int extraSpacing);
 	void DrawString(PixelMemory * destPM, char * str, int x, int y);
+	void DrawProportionalString(PixelMemory * destPM, char * str, int x, int y, int extraSpacing);
 	void GetBoundingBox(PixelMemory * destPM, char * str, int x, int y, BoundingBox * bb);
 
 private:
@@ -42,6 +45,8 @@ private:
 
 	uint32_t ** glyphArray;
 	uint32_t ** glyphArrayMask;
+	unsigned char ** leftPadding;
+	unsigned char ** rightPadding;
 
 	void createGlyphs();
 
